@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Note</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>📅 Calendar Note</h1>
+
+        <div class="calendar-controls">
+            <button id="prevMonth">‹</button>
+
+            <h2 id="monthYear"></h2>
+
+            <button id="nextMonth">›</button>
+        </div>
+
+        <button id="todayBtn" class="today-btn">
+            Hôm nay
+        </button>
+    </header>
+
+    <div class="calendar">
+
+        <div class="weekdays">
+            <div>T2</div>
+            <div>T3</div>
+            <div>T4</div>
+            <div>T5</div>
+            <div>T6</div>
+            <div>T7</div>
+            <div>CN</div>
+        </div>
+
+        <div id="calendarDays" class="days"></div>
+
+    </div>
+
+</div>
+
+
+<!-- Cửa sổ nhập ghi chú -->
+
+<div id="modal" class="modal">
+
+    <div class="modal-content">
+
+        <button id="closeModal" class="close">
+            ×
+        </button>
+
+        <h2 id="selectedDate"></h2>
+
+        <label>Tiêu đề</label>
+
+        <input
+            type="text"
+            id="noteTitle"
+            placeholder="Ví dụ: Họp khách hàng"
+        >
+
+        <label>Nội dung</label>
+
+        <textarea
+            id="noteContent"
+            placeholder="Nhập nội dung ghi chú..."
+        ></textarea>
+
+        <label>Người cập nhật</label>
+
+        <input
+            type="text"
+            id="createdBy"
+            placeholder="Nhập tên của bạn"
+        >
+
+        <div class="modal-buttons">
+
+            <button id="deleteBtn" class="delete-btn">
+                Xóa
+            </button>
+
+            <div>
+                <button id="cancelBtn">
+                    Hủy
+                </button>
+
+                <button id="saveBtn" class="save-btn">
+                    Lưu
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="app.js"></script>
+
+</body>
+</html>
