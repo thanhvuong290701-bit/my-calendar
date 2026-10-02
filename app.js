@@ -12,24 +12,38 @@ const supabaseClient =
     );
 
 
-let currentDate = new Date();
+// ========================================
+// BIẾN
+// ========================================
+
+let currentWeekStart = getMonday(new Date());
 
 let selectedDate = null;
 
 let selectedNote = null;
 
 
-const monthYear =
-    document.getElementById("monthYear");
+// ========================================
+// ELEMENT
+// ========================================
 
-const calendarDays =
-    document.getElementById("calendarDays");
+const weekTitle =
+    document.getElementById("weekTitle");
+
+const weekColumns =
+    document.getElementById("weekColumns");
+
+const timeLabels =
+    document.getElementById("timeLabels");
 
 const modal =
     document.getElementById("modal");
 
 const selectedDateElement =
     document.getElementById("selectedDate");
+
+const noteTime =
+    document.getElementById("noteTime");
 
 const noteTitle =
     document.getElementById("noteTitle");
@@ -40,67 +54,120 @@ const noteContent =
 const createdBy =
     document.getElementById("createdBy");
 
+const existingNotes =
+    document.getElementById("existingNotes");
 
+const saveBtn =
+    document.getElementById("saveBtn");
+
+const deleteBtn =
+    document.getElementById("deleteBtn");
+
+
+// ========================================
+// TẠO NHÃN GIỜ
+// ========================================
+
+function createTimeLabels() {
+
+    timeLabels.innerHTML = "";
+
+    for (
+        let hour = 0;
+        hour < 24;
+        hour++
+    ) {
+
+        const label =
+            document.createElement("div");
+
+        label.className =
+            "time-label";
+
+
+        let displayHour;
+
+        if (hour === 0) {
+
+            displayHour = "12 AM";
+
+        } else if (hour < 12) {
+
+            displayHour =
+                `${hour} AM`;
+
+        } else if (hour === 12) {
+
+            displayHour = "12 PM";
+
+        } else {
+
+            displayHour =
+                `${hour - 12} PM`;
+        }
+
+
+        label.textContent =
+            displayHour;
+
+
+        timeLabels.appendChild(label);
+    }
+}
+
+
+// ========================================
+// HIỂN THỊ LỊCH TUẦN
+// ========================================
 
 async function loadCalendar() {
 
-    calendarDays.innerHTML = "";
-
-    const year =
-        currentDate.getFullYear();
-
-    const month =
-        currentDate.getMonth();
+    weekColumns.innerHTML = "";
 
 
-    const firstDay =
-        new Date(year, month, 1);
+    const weekEnd =
+        new Date(currentWeekStart);
 
-    const lastDay =
-        new Date(year, month + 1, 0);
-
-
-    const firstDayOfWeek =
-        (firstDay.getDay() + 6) % 7;
+    weekEnd.setDate(
+        weekEnd.getDate() + 6
+    );
 
 
-    const totalDays =
-        lastDay.getDate();
+    updateWeekTitle(
+        currentWeekStart,
+        weekEnd
+    );
 
-
-    const previousMonthLastDay =
-        new Date(year, month, 0).getDate();
-
-
-    monthYear.textContent =
-        currentDate.toLocaleDateString(
-            "vi-VN",
-            {
-                month: "long",
-                year: "numeric"
-            }
-        );
-
-
-    // Lấy note của tháng hiện tại
 
     const startDate =
-        formatDate(
-            new Date(year, month, 1)
-        );
+        formatDate(currentWeekStart);
 
     const endDate =
-        formatDate(
-            new Date(year, month + 1, 0)
-        );
+        formatDate(weekEnd);
 
+
+    // ====================================
+    // LẤY DỮ LIỆU SUPABASE
+    // ====================================
 
     const { data, error } =
         await supabaseClient
             .from("calendar_notes")
             .select("*")
-            .gte("event_date", startDate)
-            .lte("event_date", endDate);
+            .gte(
+                "event_date",
+                startDate
+            )
+            .lte(
+                "event_date",
+                endDate
+            )
+            .order(
+                "event_time",
+                {
+                    ascending: true
+                }
+            );
 
 
     if (error) {
@@ -108,255 +175,792 @@ async function loadCalendar() {
         console.error(error);
 
         alert(
-            "Không thể tải dữ liệu Calendar. Kiểm tra Supabase."
+            "Không thể tải dữ liệu Calendar."
         );
 
         return;
     }
 
 
-    const notes = data || [];
+    const notes =
+        data || [];
 
 
-    // Ngày tháng trước
-
-    for (
-        let i = firstDayOfWeek - 1;
-        i >= 0;
-        i--
-    ) {
-
-        const day =
-            previousMonthLastDay - i;
-
-        createDay(
-            day,
-            new Date(year, month - 1, day),
-            true,
-            []
-        );
-    }
-
-
-    // Ngày tháng hiện tại
+    // ====================================
+    // TẠO 7 CỘT
+    // ====================================
 
     for (
-        let day = 1;
-        day <= totalDays;
-        day++
+        let i = 0;
+        i < 7;
+        i++
     ) {
 
         const date =
-            new Date(year, month, day);
-
-        const dateString =
-            formatDate(date);
-
-        const dayNotes =
-            notes.filter(
-                n => n.event_date === dateString
+            new Date(
+                currentWeekStart
             );
 
-        createDay(
-            day,
-            date,
-            false,
-            dayNotes
+        date.setDate(
+            date.getDate() + i
         );
-    }
 
 
-    // Ngày tháng sau
-
-    const totalCells =
-        firstDayOfWeek + totalDays;
-
-    const remaining =
-        totalCells % 7 === 0
-            ? 0
-            : 7 - (totalCells % 7);
-
-
-    for (
-        let day = 1;
-        day <= remaining;
-        day++
-    ) {
-
-        createDay(
-            day,
-            new Date(year, month + 1, day),
-            true,
-            []
+        createDayColumn(
+            date,
+            notes
         );
     }
 }
 
 
+// ========================================
+// TẠO CỘT NGÀY
+// ========================================
 
-function createDay(
-    dayNumber,
+function createDayColumn(
     date,
-    otherMonth,
-    notes
+    allNotes
 ) {
 
-    const div =
+    const column =
         document.createElement("div");
 
-    div.className = "day";
+    column.className =
+        "day-column";
 
 
-    if (otherMonth) {
+    // ====================================
+    // HEADER
+    // ====================================
 
-        div.classList.add(
-            "other-month"
-        );
-    }
+    const header =
+        document.createElement("div");
+
+    header.className =
+        "day-header";
 
 
     if (isToday(date)) {
 
-        div.classList.add(
+        header.classList.add(
             "today"
         );
     }
 
 
-    const number =
+    const dayName =
         document.createElement("div");
 
-    number.className =
+    dayName.className =
+        "day-name";
+
+    dayName.textContent =
+        getDayName(date);
+
+
+    const dayNumber =
+        document.createElement("div");
+
+    dayNumber.className =
         "day-number";
 
-    number.textContent =
-        dayNumber;
+    dayNumber.textContent =
+        date.getDate();
 
 
-    div.appendChild(number);
+    header.appendChild(
+        dayName
+    );
 
-
-    notes.forEach(note => {
-
-        const noteDiv =
-            document.createElement("div");
-
-        noteDiv.className =
-            "note";
-
-
-        const title =
-    document.createElement("div");
-
-title.className =
-    "note-title";
-
-title.textContent =
-    "📝 " + note.title;
-
-
-noteDiv.appendChild(title);
-
-
-// Hiển thị thời gian cập nhật
-
-const time =
-    document.createElement("div");
-
-time.className =
-    "note-time";
-
-if (note.updated_at) {
-
-    const updated =
-        new Date(note.updated_at);
-
-    time.textContent =
-        "🕐 " +
-        updated.toLocaleString(
-            "vi-VN",
-            {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit"
-            }
-        );
-}
-
-noteDiv.appendChild(time);
-
-div.appendChild(noteDiv);
-    });
-
-
-    div.addEventListener(
-        "click",
-        () => openModal(date, notes)
+    header.appendChild(
+        dayNumber
     );
 
 
-    calendarDays.appendChild(div);
-}
+    column.appendChild(
+        header
+    );
 
 
+    // ====================================
+    // KHUNG 24 GIỜ
+    // ====================================
 
-function openModal(date, notes) {
+    const hourGrid =
+        document.createElement("div");
 
-    selectedDate = formatDate(date);
-
-    selectedNote =
-        notes.length > 0
-            ? notes[0]
-            : null;
+    hourGrid.className =
+        "hour-grid";
 
 
-    selectedDateElement.textContent =
-        date.toLocaleDateString(
-            "vi-VN",
-            {
-                weekday: "long",
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric"
-            }
+    // ====================================
+    // LẤY NOTE CỦA NGÀY
+    // ====================================
+
+    const dateString =
+        formatDate(date);
+
+
+    const dayNotes =
+        allNotes.filter(
+            note =>
+                note.event_date ===
+                dateString
         );
 
 
-    if (selectedNote) {
+    // ====================================
+    // CLICK VÀO KHUNG GIỜ
+    // ====================================
 
-        noteTitle.value =
-            selectedNote.title || "";
+    hourGrid.addEventListener(
+        "click",
+        event => {
 
-        noteContent.value =
-            selectedNote.content || "";
+            // Nếu click trực tiếp vào event
+            // thì không tạo note mới
 
-        createdBy.value =
-            selectedNote.created_by || "";
+            if (
+                event.target.closest(
+                    ".calendar-event"
+                )
+            ) {
+                return;
+            }
 
-    } else {
 
-        noteTitle.value = "";
+            const rect =
+                hourGrid.getBoundingClientRect();
 
-        noteContent.value = "";
 
-        createdBy.value = "";
+            const y =
+                event.clientY -
+                rect.top +
+                hourGrid.scrollTop;
+
+
+            let totalMinutes =
+                Math.floor(
+                    y / 60 * 60
+                );
+
+
+            // Làm tròn về mỗi 15 phút
+
+            totalMinutes =
+                Math.round(
+                    totalMinutes / 15
+                ) * 15;
+
+
+            if (
+                totalMinutes < 0
+            ) {
+                totalMinutes = 0;
+            }
+
+
+            if (
+                totalMinutes > 1439
+            ) {
+                totalMinutes = 1439;
+            }
+
+
+            const hour =
+                Math.floor(
+                    totalMinutes / 60
+                );
+
+
+            const minute =
+                totalMinutes % 60;
+
+
+            const time =
+                String(hour)
+                    .padStart(2, "0")
+                + ":" +
+                String(minute)
+                    .padStart(2, "0");
+
+
+            openNewNote(
+                date,
+                time,
+                dayNotes
+            );
+        }
+    );
+
+
+    // ====================================
+    // TẠO ĐƯỜNG NỬA GIỜ
+    // ====================================
+
+    for (
+        let hour = 0;
+        hour < 24;
+        hour++
+    ) {
+
+        const halfHour =
+            document.createElement("div");
+
+        halfHour.className =
+            "half-hour";
+
+
+        halfHour.style.top =
+            `${hour * 60 + 30}px`;
+
+
+        hourGrid.appendChild(
+            halfHour
+        );
     }
 
 
-    modal.classList.add("show");
+    // ====================================
+    // HIỂN THỊ CÁC NOTE
+    // ====================================
+
+    dayNotes.forEach(
+        note => {
+
+            createEvent(
+                note,
+                hourGrid,
+                date,
+                dayNotes
+            );
+        }
+    );
+
+
+    column.appendChild(
+        hourGrid
+    );
+
+
+    weekColumns.appendChild(
+        column
+    );
 }
 
 
+// ========================================
+// TẠO EVENT
+// ========================================
+
+function createEvent(
+    note,
+    hourGrid,
+    date,
+    dayNotes
+) {
+
+    const event =
+        document.createElement("div");
+
+    event.className =
+        "calendar-event";
+
+
+    // ====================================
+    // NOTE CŨ KHÔNG CÓ GIỜ
+    // ====================================
+
+    if (!note.event_time) {
+
+        event.style.top =
+            "5px";
+
+        event.style.minHeight =
+            "42px";
+
+    } else {
+
+        const parts =
+            note.event_time
+                .substring(0, 5)
+                .split(":");
+
+
+        const hour =
+            parseInt(parts[0], 10);
+
+
+        const minute =
+            parseInt(parts[1], 10);
+
+
+        const top =
+            hour * 60 + minute;
+
+
+        event.style.top =
+            `${top}px`;
+    }
+
+
+    // ====================================
+    // CHIỀU CAO
+    // ====================================
+
+    event.style.height =
+        "54px";
+
+
+    // ====================================
+    // GIỜ
+    // ====================================
+
+    const time =
+        document.createElement("div");
+
+    time.className =
+        "event-time";
+
+
+    if (note.event_time) {
+
+        time.textContent =
+            note.event_time
+                .substring(0, 5);
+
+    } else {
+
+        time.textContent =
+            "Cả ngày";
+    }
+
+
+    // ====================================
+    // TIÊU ĐỀ
+    // ====================================
+
+    const title =
+        document.createElement("div");
+
+    title.className =
+        "event-title";
+
+    title.textContent =
+        note.title ||
+        "Không có tiêu đề";
+
+
+    // ====================================
+    // NỘI DUNG
+    // ====================================
+
+    const content =
+        document.createElement("div");
+
+    content.className =
+        "event-content";
+
+    content.textContent =
+        note.content || "";
+
+
+    event.appendChild(
+        time
+    );
+
+    event.appendChild(
+        title
+    );
+
+    if (note.content) {
+
+        event.appendChild(
+            content
+        );
+    }
+
+
+    // ====================================
+    // CLICK EVENT
+    // ====================================
+
+    event.addEventListener(
+        "click",
+        eventClick => {
+
+            eventClick.stopPropagation();
+
+
+            openEditNote(
+                note,
+                date,
+                dayNotes
+            );
+        }
+    );
+
+
+    hourGrid.appendChild(
+        event
+    );
+}
+
+
+// ========================================
+// MỞ NOTE MỚI
+// ========================================
+
+function openNewNote(
+    date,
+    time,
+    dayNotes
+) {
+
+    selectedDate =
+        formatDate(date);
+
+
+    selectedNote =
+        null;
+
+
+    selectedDateElement.textContent =
+        formatDateVietnamese(
+            date
+        );
+
+
+    noteTime.value =
+        time;
+
+
+    noteTitle.value =
+        "";
+
+    noteContent.value =
+        "";
+
+    createdBy.value =
+        "";
+
+
+    saveBtn.textContent =
+        "Lưu";
+
+
+    deleteBtn.style.display =
+        "none";
+
+
+    renderExistingNotes(
+        dayNotes
+    );
+
+
+    modal.classList.add(
+        "show"
+    );
+}
+
+
+// ========================================
+// MỞ NOTE ĐỂ SỬA
+// ========================================
+
+function openEditNote(
+    note,
+    date,
+    dayNotes
+) {
+
+    selectedDate =
+        formatDate(date);
+
+
+    selectedNote =
+        note;
+
+
+    selectedDateElement.textContent =
+        formatDateVietnamese(
+            date
+        );
+
+
+    noteTime.value =
+        note.event_time
+            ? note.event_time.substring(
+                0,
+                5
+            )
+            : "";
+
+
+    noteTitle.value =
+        note.title || "";
+
+
+    noteContent.value =
+        note.content || "";
+
+
+    createdBy.value =
+        note.created_by || "";
+
+
+    saveBtn.textContent =
+        "Cập nhật";
+
+
+    deleteBtn.style.display =
+        "inline-block";
+
+
+    renderExistingNotes(
+        dayNotes
+    );
+
+
+    modal.classList.add(
+        "show"
+    );
+}
+
+
+// ========================================
+// HIỂN THỊ NOTE TRONG NGÀY
+// ========================================
+
+function renderExistingNotes(
+    notes
+) {
+
+    existingNotes.innerHTML = "";
+
+
+    if (
+        !notes ||
+        notes.length === 0
+    ) {
+
+        return;
+    }
+
+
+    const title =
+        document.createElement("div");
+
+    title.textContent =
+        "Ghi chú trong ngày";
+
+    title.style.fontWeight =
+        "bold";
+
+    title.style.marginBottom =
+        "8px";
+
+
+    existingNotes.appendChild(
+        title
+    );
+
+
+    notes.forEach(
+        note => {
+
+            const item =
+                document.createElement("div");
+
+            item.className =
+                "existing-note";
+
+
+            const itemTitle =
+                document.createElement(
+                    "div"
+                );
+
+            itemTitle.className =
+                "existing-note-title";
+
+
+            const time =
+                note.event_time
+                    ? note.event_time
+                        .substring(0, 5)
+                    : "Cả ngày";
+
+
+            itemTitle.textContent =
+                `🕐 ${time} — ${note.title}`;
+
+
+            item.appendChild(
+                itemTitle
+            );
+
+
+            if (note.content) {
+
+                const itemContent =
+                    document.createElement(
+                        "div"
+                    );
+
+                itemContent.style.marginTop =
+                    "5px";
+
+                itemContent.style.fontSize =
+                    "13px";
+
+                itemContent.style.color =
+                    "#c4c7ca";
+
+                itemContent.textContent =
+                    note.content;
+
+
+                item.appendChild(
+                    itemContent
+                );
+            }
+
+
+            const info =
+                document.createElement(
+                    "div"
+                );
+
+            info.className =
+                "existing-note-info";
+
+
+            let infoText = "";
+
+
+            if (note.created_by) {
+
+                infoText =
+                    `👤 ${note.created_by}`;
+            }
+
+
+            if (note.updated_at) {
+
+                if (infoText) {
+                    infoText += " • ";
+                }
+
+
+                infoText +=
+                    "Cập nhật " +
+                    new Date(
+                        note.updated_at
+                    ).toLocaleString(
+                        "vi-VN",
+                        {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit"
+                        }
+                    );
+            }
+
+
+            info.textContent =
+                infoText;
+
+
+            item.appendChild(
+                info
+            );
+
+
+            // ==========================
+            // NÚT SỬA
+            // ==========================
+
+            const editButton =
+                document.createElement(
+                    "button"
+                );
+
+            editButton.textContent =
+                "✏️ Sửa";
+
+
+            editButton.style.marginTop =
+                "8px";
+
+
+            editButton.style.padding =
+                "6px 10px";
+
+
+            editButton.style.border =
+                "none";
+
+
+            editButton.style.borderRadius =
+                "6px";
+
+
+            editButton.style.cursor =
+                "pointer";
+
+
+            editButton.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+
+                    openEditNote(
+                        note,
+                        parseDate(
+                            note.event_date
+                        ),
+                        notes
+                    );
+                }
+            );
+
+
+            item.appendChild(
+                editButton
+            );
+
+
+            existingNotes.appendChild(
+                item
+            );
+        }
+    );
+}
+
+
+// ========================================
+// LƯU NOTE
+// ========================================
 
 async function saveNote() {
+
+    const time =
+        noteTime.value;
+
 
     const title =
         noteTitle.value.trim();
 
+
     const content =
         noteContent.value.trim();
+
 
     const user =
         createdBy.value.trim();
@@ -372,21 +976,34 @@ async function saveNote() {
     }
 
 
+    // ====================================
+    // CẬP NHẬT
+    // ====================================
+
     if (selectedNote) {
 
         const { error } =
             await supabaseClient
-                .from("calendar_notes")
+                .from(
+                    "calendar_notes"
+                )
                 .update({
 
-                    title: title,
+                    event_time:
+                        time || null,
 
-                    content: content,
+                    title:
+                        title,
 
-                    created_by: user,
+                    content:
+                        content,
+
+                    created_by:
+                        user,
 
                     updated_at:
-                        new Date().toISOString()
+                        new Date()
+                            .toISOString()
 
                 })
                 .eq(
@@ -406,21 +1023,35 @@ async function saveNote() {
             return;
         }
 
-    } else {
+    }
+
+    // ====================================
+    // TẠO MỚI
+    // ====================================
+
+    else {
 
         const { error } =
             await supabaseClient
-                .from("calendar_notes")
+                .from(
+                    "calendar_notes"
+                )
                 .insert({
 
                     event_date:
                         selectedDate,
 
-                    title: title,
+                    event_time:
+                        time || null,
 
-                    content: content,
+                    title:
+                        title,
 
-                    created_by: user
+                    content:
+                        content,
+
+                    created_by:
+                        user
 
                 });
 
@@ -440,10 +1071,13 @@ async function saveNote() {
 
     closeModal();
 
-    loadCalendar();
+    await loadCalendar();
 }
 
 
+// ========================================
+// XÓA NOTE
+// ========================================
 
 async function deleteNote() {
 
@@ -469,7 +1103,9 @@ async function deleteNote() {
 
     const { error } =
         await supabaseClient
-            .from("calendar_notes")
+            .from(
+                "calendar_notes"
+            )
             .delete()
             .eq(
                 "id",
@@ -491,10 +1127,13 @@ async function deleteNote() {
 
     closeModal();
 
-    loadCalendar();
+    await loadCalendar();
 }
 
 
+// ========================================
+// ĐÓNG MODAL
+// ========================================
 
 function closeModal() {
 
@@ -502,33 +1141,326 @@ function closeModal() {
         "show"
     );
 
-    selectedNote = null;
+
+    selectedNote =
+        null;
 }
 
 
+// ========================================
+// TUẦN TRƯỚC
+// ========================================
 
-function formatDate(date) {
+document
+    .getElementById("prevWeek")
+    .addEventListener(
+        "click",
+        () => {
+
+            currentWeekStart =
+                new Date(
+                    currentWeekStart
+                );
+
+
+            currentWeekStart.setDate(
+                currentWeekStart.getDate() - 7
+            );
+
+
+            loadCalendar();
+        }
+    );
+
+
+// ========================================
+// TUẦN SAU
+// ========================================
+
+document
+    .getElementById("nextWeek")
+    .addEventListener(
+        "click",
+        () => {
+
+            currentWeekStart =
+                new Date(
+                    currentWeekStart
+                );
+
+
+            currentWeekStart.setDate(
+                currentWeekStart.getDate() + 7
+            );
+
+
+            loadCalendar();
+        }
+    );
+
+
+// ========================================
+// HÔM NAY
+// ========================================
+
+document
+    .getElementById("todayBtn")
+    .addEventListener(
+        "click",
+        () => {
+
+            currentWeekStart =
+                getMonday(
+                    new Date()
+                );
+
+
+            loadCalendar();
+        }
+    );
+
+
+// ========================================
+// LƯU
+// ========================================
+
+saveBtn.addEventListener(
+    "click",
+    saveNote
+);
+
+
+// ========================================
+// XÓA
+// ========================================
+
+deleteBtn.addEventListener(
+    "click",
+    deleteNote
+);
+
+
+// ========================================
+// ĐÓNG
+// ========================================
+
+document
+    .getElementById("closeModal")
+    .addEventListener(
+        "click",
+        closeModal
+    );
+
+
+document
+    .getElementById("cancelBtn")
+    .addEventListener(
+        "click",
+        closeModal
+    );
+
+
+// ========================================
+// CLICK RA NGOÀI
+// ========================================
+
+modal.addEventListener(
+    "click",
+    event => {
+
+        if (
+            event.target === modal
+        ) {
+
+            closeModal();
+        }
+    }
+);
+
+
+// ========================================
+// LẤY THỨ 2 CỦA TUẦN
+// ========================================
+
+function getMonday(
+    date
+) {
+
+    const result =
+        new Date(date);
+
+
+    const day =
+        result.getDay();
+
+
+    const diff =
+        day === 0
+            ? -6
+            : 1 - day;
+
+
+    result.setDate(
+        result.getDate() + diff
+    );
+
+
+    result.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+
+    return result;
+}
+
+// ========================================
+// TIÊU ĐỀ TUẦN
+// ========================================
+
+function updateWeekTitle(
+    startDate,
+    endDate
+) {
+
+    const startDay =
+        startDate.getDate();
+
+    const startMonth =
+        startDate.getMonth() + 1;
+
+    const endDay =
+        endDate.getDate();
+
+    const endMonth =
+        endDate.getMonth() + 1;
+
+    const year =
+        startDate.getFullYear();
+
+
+    if (
+        startMonth === endMonth
+    ) {
+
+        weekTitle.textContent =
+            `${startDay} – ${endDay}/${startMonth}/${year}`;
+
+    } else {
+
+        weekTitle.textContent =
+            `${startDay}/${startMonth} – ${endDay}/${endMonth}/${year}`;
+    }
+}
+
+// ========================================
+// TÊN THỨ
+// ========================================
+
+function getDayName(
+    date
+) {
+
+    const names = [
+        "CN",
+        "THỨ 2",
+        "THỨ 3",
+        "THỨ 4",
+        "THỨ 5",
+        "THỨ 6",
+        "THỨ 7"
+    ];
+
+
+    return names[
+        date.getDay()
+    ];
+}
+
+
+// ========================================
+// FORMAT DATE
+// ========================================
+
+function formatDate(
+    date
+) {
 
     const year =
         date.getFullYear();
 
+
     const month =
         String(
             date.getMonth() + 1
-        ).padStart(2, "0");
+        ).padStart(
+            2,
+            "0"
+        );
+
 
     const day =
         String(
             date.getDate()
-        ).padStart(2, "0");
+        ).padStart(
+            2,
+            "0"
+        );
 
 
     return `${year}-${month}-${day}`;
 }
 
 
+// ========================================
+// PARSE DATE
+// ========================================
 
-function isToday(date) {
+function parseDate(
+    dateString
+) {
+
+    const parts =
+        dateString.split("-");
+
+
+    return new Date(
+        Number(parts[0]),
+        Number(parts[1]) - 1,
+        Number(parts[2])
+    );
+}
+
+
+// ========================================
+// FORMAT NGÀY TIẾNG VIỆT
+// ========================================
+
+function formatDateVietnamese(
+    date
+) {
+
+    return date.toLocaleDateString(
+        "vi-VN",
+        {
+            weekday: "long",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
+        }
+    );
+}
+
+
+// ========================================
+// HÔM NAY?
+// ========================================
+
+function isToday(
+    date
+) {
 
     const today =
         new Date();
@@ -547,110 +1479,10 @@ function isToday(date) {
 }
 
 
+// ========================================
+// KHỞI ĐỘNG
+// ========================================
 
-document
-    .getElementById("prevMonth")
-    .addEventListener(
-        "click",
-        () => {
-
-            currentDate =
-                new Date(
-                    currentDate.getFullYear(),
-                    currentDate.getMonth() - 1,
-                    1
-                );
-
-            loadCalendar();
-        }
-    );
-
-
-
-document
-    .getElementById("nextMonth")
-    .addEventListener(
-        "click",
-        () => {
-
-            currentDate =
-                new Date(
-                    currentDate.getFullYear(),
-                    currentDate.getMonth() + 1,
-                    1
-                );
-
-            loadCalendar();
-        }
-    );
-
-
-
-document
-    .getElementById("todayBtn")
-    .addEventListener(
-        "click",
-        () => {
-
-            currentDate =
-                new Date();
-
-            loadCalendar();
-        }
-    );
-
-
-
-document
-    .getElementById("saveBtn")
-    .addEventListener(
-        "click",
-        saveNote
-    );
-
-
-
-document
-    .getElementById("deleteBtn")
-    .addEventListener(
-        "click",
-        deleteNote
-    );
-
-
-
-document
-    .getElementById("closeModal")
-    .addEventListener(
-        "click",
-        closeModal
-    );
-
-
-
-document
-    .getElementById("cancelBtn")
-    .addEventListener(
-        "click",
-        closeModal
-    );
-
-
-
-modal.addEventListener(
-    "click",
-    event => {
-
-        if (
-            event.target === modal
-        ) {
-
-            closeModal();
-        }
-    }
-);
-
-
-// Khởi động Calendar
+createTimeLabels();
 
 loadCalendar();
