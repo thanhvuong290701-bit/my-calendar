@@ -1,112 +1,194 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendar Note</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Lịch Cho EmBe 💗</title>
+
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<div class="container">
+<div class="app">
 
-    <header>
-        <h1>💗 Lịch Cho EmBe 💗</h1>
+    <!-- THANH TRÊN -->
 
-        <div class="calendar-controls">
-            <button id="prevMonth">‹</button>
+    <header class="topbar">
 
-            <h2 id="monthYear"></h2>
+        <div class="brand">
 
-            <button id="nextMonth">›</button>
-        </div>
-
-        <button id="todayBtn" class="today-btn">
-            Hôm nay
-        </button>
-    </header>
-
-    <div class="calendar">
-
-        <div class="weekdays">
-            <div>T2</div>
-            <div>T3</div>
-            <div>T4</div>
-            <div>T5</div>
-            <div>T6</div>
-            <div>T7</div>
-            <div>CN</div>
-        </div>
-
-        <div id="calendarDays" class="days"></div>
-
-    </div>
-
-</div>
-
-
-<!-- Cửa sổ nhập ghi chú -->
-
-<div id="modal" class="modal">
-
-    <div class="modal-content">
-
-        <button id="closeModal" class="close">
-            ×
-        </button>
-
-        <h2 id="selectedDate"></h2>
-
-        <label>Tiêu đề</label>
-
-        <input
-            type="text"
-            id="noteTitle"
-            placeholder="Ví dụ: Họp khách hàng"
-        >
-
-        <label>Nội dung</label>
-
-        <textarea
-            id="noteContent"
-            placeholder="Nhập nội dung ghi chú..."
-        ></textarea>
-
-        <label>Người cập nhật</label>
-
-        <input
-            type="text"
-            id="createdBy"
-            placeholder="Nhập tên của bạn"
-        >
-
-        <div class="modal-buttons">
-
-            <button id="deleteBtn" class="delete-btn">
-                Xóa
+            <button id="menuBtn" class="icon-btn">
+                ☰
             </button>
 
-            <div>
-                <button id="cancelBtn">
-                    Hủy
+            <h1>💗 Lịch Cho EmBe</h1>
+
+        </div>
+
+
+        <div class="navigation">
+
+            <button id="prevWeek" class="nav-btn">
+                ‹
+            </button>
+
+            <button id="todayBtn" class="today-btn">
+                Hôm nay
+            </button>
+
+            <button id="nextWeek" class="nav-btn">
+                ›
+            </button>
+
+            <div id="weekTitle" class="week-title">
+                Tuần
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- LỊCH -->
+
+    <main class="calendar-container">
+
+        <div class="calendar-scroll">
+
+            <div class="calendar">
+
+                <!-- CỘT GIỜ -->
+
+                <div class="time-column">
+
+                    <div class="time-header"></div>
+
+                    <div id="timeLabels"></div>
+
+                </div>
+
+
+                <!-- 7 NGÀY -->
+
+                <div id="weekColumns"
+                    class="week-columns">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- MODAL -->
+
+    <div id="modal" class="modal">
+
+        <div class="modal-content">
+
+            <button id="closeModal"
+                class="close">
+                ×
+            </button>
+
+
+            <h2 id="selectedDate">
+                Thêm ghi chú
+            </h2>
+
+
+            <label>
+                Giờ
+            </label>
+
+            <input
+                type="time"
+                id="noteTime"
+            >
+
+
+            <label>
+                Tiêu đề
+            </label>
+
+            <input
+                type="text"
+                id="noteTitle"
+                placeholder="Nhập nội dung..."
+            >
+
+
+            <label>
+                Nội dung
+            </label>
+
+            <textarea
+                id="noteContent"
+                placeholder="Nhập nội dung..."
+            ></textarea>
+
+
+            <label>
+                Người cập nhật
+            </label>
+
+            <input
+                type="text"
+                id="createdBy"
+                placeholder="Nhập tên"
+            >
+
+
+            <div id="existingNotes"
+                class="existing-notes">
+
+            </div>
+
+
+            <div class="modal-buttons">
+
+                <button
+                    id="deleteBtn"
+                    class="delete-btn">
+                    Xóa
                 </button>
 
-                <button id="saveBtn" class="save-btn">
-                    Lưu
-                </button>
+
+                <div>
+
+                    <button
+                        id="cancelBtn">
+                        Hủy
+                    </button>
+
+                    <button
+                        id="saveBtn"
+                        class="save-btn">
+                        Lưu
+                    </button>
+
+                </div>
+
             </div>
 
         </div>
 
     </div>
 
+
+    <!-- SUPABASE -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="app.js"></script>
+
 </div>
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script src="app.js"></script>
 
 </body>
 </html>
